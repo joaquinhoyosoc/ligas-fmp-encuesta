@@ -1,0 +1,13 @@
+# encuesta (mini-app publica) - tema claro de la app (estilo.py, paleta "claro")
+[theme]
+base = "light"
+primaryColor = "#2272D6"
+backgroundColor = "#EEF2F7"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#13202F"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
