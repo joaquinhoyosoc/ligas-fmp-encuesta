@@ -1,6 +1,8 @@
 """
 =============================================================================
-encuesta.py  (versión 1.0 · 2026-11-10 · T-164, entrega E1)
+encuesta.py  (versión 1.1 · 2026-11-10 · T-164, entrega E1)
+v1.1: marcador en dos filas (nombres largos en el móvil); grupos de rasgos plegados salvo Estilo, con el
+      número de marcados en el título.
 -----------------------------------------------------------------------------
 Mini-app PÚBLICA de la encuesta postpartido (repo público «ligas-fmp-encuesta»).
 Sin login: solo se entra con un enlace  …/?e=CODIGO  que genera el capitán.
@@ -30,7 +32,7 @@ from datetime import datetime, timezone
 
 import streamlit as st
 
-VERSION = "1.0"
+VERSION = "1.1"
 MAX_CRONICA = 2000
 MAX_COMENTARIO = 500
 MAX_EDICIONES = 20
@@ -47,10 +49,11 @@ html, body, [class*="css"] {font-family:-apple-system, BlinkMacSystemFont, "SF P
 .enc-cab {background:#FFFFFF; border:1px solid #E7ECF2; border-radius:18px; padding:18px 18px 14px;
           box-shadow:0 1px 2px rgba(19,32,47,.04), 0 6px 18px rgba(19,32,47,.05); margin-bottom:14px}
 .enc-eti {font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#56677A; margin-bottom:8px}
-.enc-marc {display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px}
-.enc-eq {font-weight:600; font-size:16px; color:#13202F; line-height:1.25}
-.enc-eq.der {text-align:right}
-.enc-num {font-size:28px; font-weight:700; color:#13202F; font-variant-numeric:tabular-nums; white-space:nowrap}
+.enc-marc {display:grid; grid-template-columns:1fr auto; align-items:center; column-gap:14px; row-gap:6px}
+.enc-eq {font-weight:600; font-size:15px; color:#13202F; line-height:1.25}
+.enc-eq.rival {font-weight:500; color:#3E4E61}
+.enc-num {font-size:26px; font-weight:700; color:#13202F; font-variant-numeric:tabular-nums; text-align:right; line-height:1.1}
+.enc-num.rival {font-weight:600; color:#3E4E61}
 .enc-sub {font-size:13px; color:#56677A; margin-top:10px}
 .enc-part {background:#F2F5F9; border-radius:14px; padding:12px 14px; margin:6px 0 4px}
 .enc-fila {display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:15px; color:#13202F}
@@ -196,12 +199,14 @@ if estado != "abierta" or caduca < _ahora():
 J = foto["jugadores"]
 nombre = lambda j: J.get(str(j), {}).get("corto") or f"Jugador {j}"
 marc = foto.get("marcador")
-num = f"{marc[0]} – {marc[1]}" if marc else "vs"
+g1, g2 = (marc[0], marc[1]) if marc else ("", "")
 lugar = "En casa" if foto.get("en_casa") else "Fuera"
 st.markdown(f"""<div class='enc-cab'>
   <div class='enc-eti'>Encuesta postpartido</div>
-  <div class='enc-marc'><div class='enc-eq'>{_e(foto['nuestro']['nombre'])}</div>
-    <div class='enc-num'>{_e(num)}</div><div class='enc-eq der'>{_e(foto['rival']['nombre'])}</div></div>
+  <div class='enc-marc'>
+    <div class='enc-eq'>{_e(foto['nuestro']['nombre'])}</div><div class='enc-num'>{_e(g1)}</div>
+    <div class='enc-eq rival'>{_e(foto['rival']['nombre'])}</div><div class='enc-num rival'>{_e(g2)}</div>
+  </div>
   <div class='enc-sub'>J{_e(foto.get('jornada'))} · {_e(foto.get('division'))} · {_e(foto.get('fecha') or '')} · {lugar}</div>
 </div>""", unsafe_allow_html=True)
 
@@ -289,10 +294,16 @@ for j in rivales:
         st.session_state.setdefault(f"lado_{j}", base.get("lado") or None)
         st.segmented_control("Lado", options=list(LADO_CORTO), format_func=LADO_CORTO.get, key=f"lado_{j}")
         marcados = set(base.get("rasgos") or [])
-        for g in grupos:
+        for i, g in enumerate(grupos):
             cods = [r[0] for r in foto["rasgos"] if r[1] == g]
             st.session_state.setdefault(f"r_{j}_{g}", [c_ for c_ in cods if c_ in marcados])
-            st.pills(g, options=cods, format_func=nom_rasgo.get, selection_mode="multi", key=f"r_{j}_{g}")
+            if i == 0:                                   # v1.1: el primer grupo (Estilo) siempre a la vista
+                st.pills(g, options=cods, format_func=nom_rasgo.get, selection_mode="multi", key=f"r_{j}_{g}")
+                continue
+            n = len(st.session_state.get(f"r_{j}_{g}") or [])
+            with st.expander(f"{g} ({n})" if n else g, key=f"exp_{j}_{g}"):   # key: no se pliega al cambiar el número
+                st.pills(g, options=cods, format_func=nom_rasgo.get, selection_mode="multi", key=f"r_{j}_{g}",
+                         label_visibility="collapsed")
         st.session_state.setdefault(f"com_{j}", "")
         st.text_area("Comentario sobre él", key=f"com_{j}", max_chars=MAX_COMENTARIO, height=90,
                      placeholder="Lo que conviene saber para la próxima vez que nos toque.")
